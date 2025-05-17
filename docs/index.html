@@ -154,6 +154,7 @@
             </div>
         
         <button id="checkButton">채점하기</button>
+        <div id="scoreDisplay" style="text-align:center; font-size:1.2em; margin-top:10px;"></div>
 
         <button id="resetButton" style="display:none;">다시 연습하기</button>
         <a href="https://docs.google.com/forms/d/e/1FAIpQLSe61MgNJjC1dNXtrKUZTwNf_aNkO6wl6Y0rNnDIQGbmBwriuQ/viewform?pli=1" target="new">
@@ -243,6 +244,7 @@
             qrCodeImg.src = qrApiUrl;
             qrCodeImg.alt = "QR Code for " + qrCodeDataUrl;
         }
+        
 
         function initializeGame() {
             lyricsContainer.innerHTML = ''; // 이전 내용 삭제
@@ -280,52 +282,54 @@
 
         function checkAnswers() {
             const inputs = lyricsContainer.querySelectorAll('input[type="text"]');
+            let correctCount = 0;
+            let totalCount = inputs.length;
             let allBlanksFilled = true;
 
             inputs.forEach(input => {
                 const userValue = input.value.trim();
                 const originalWord = input.dataset.originalWord;
-                
+
                 if (userValue === "") {
                     allBlanksFilled = false;
                 }
 
                 const resultSpan = document.createElement('span');
-                
-                // 사용자가 입력한 값을 기준으로 파란색/빨간색 표시
                 const userAnswerSpan = document.createElement('span');
-                userAnswerSpan.textContent = userValue || "[입력안함]"; // 빈칸일 경우 표시
+                userAnswerSpan.textContent = userValue || "[입력안함]";
                 userAnswerSpan.className = 'user-attempt';
-
 
                 if (userValue.toLowerCase() === originalWord.toLowerCase()) {
                     userAnswerSpan.classList.add('correct');
-                    resultSpan.appendChild(userAnswerSpan);
+                    correctCount++;
                 } else {
                     userAnswerSpan.classList.add('incorrect');
-                    resultSpan.appendChild(userAnswerSpan);
-                    
+                }
+
+                resultSpan.appendChild(userAnswerSpan);
+
+                if (userValue.toLowerCase() !== originalWord.toLowerCase()) {
                     const hintSpan = document.createElement('span');
                     hintSpan.className = 'correct-answer-hint';
                     hintSpan.textContent = `(정답: ${originalWord})`;
                     resultSpan.appendChild(hintSpan);
                 }
-                
-                // input 요소를 결과 span으로 교체
+
                 input.parentNode.replaceChild(resultSpan, input);
             });
 
             if (!allBlanksFilled) {
                 alert("일부 빈칸이 채워지지 않았습니다. 모든 빈칸을 채운 후 채점해주세요.");
-                // 채점하지 않고 원래 상태로 되돌리려면 initializeGame()을 다시 호출하거나
-                // 현재 상태(부분 채점)를 유지할 수 있습니다. 여기서는 현재 상태를 유지합니다.
-                // 만약 미입력 시 채점을 막고 싶다면, 이 alert 이후 return하여 버튼 상태 변경 등을 막습니다.
-                // 여기서는 미입력도 오답 처리하고 결과를 보여주도록 하겠습니다.
             }
+
+            const score = Math.round((correctCount / totalCount) * 100);
+            const scoreDisplay = document.getElementById('scoreDisplay');
+            scoreDisplay.textContent = `점수: ${score}점 (${correctCount} / ${totalCount} 정답)`;
 
             checkButton.style.display = 'none';
             resetButton.style.display = 'block';
         }
+
 
         // 이벤트 리스너 연결
         checkButton.addEventListener('click', checkAnswers);
