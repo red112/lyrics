@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>아름다운 나라 - 함께한대합창단</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
+        }
+
+        #titleImage {
+            width: 100%;
+            height: auto;
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        #scoreHistory {
+            text-align: center;
+            color: #555;
+            background-color: #ecf0f1;
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        #lyricsContainer {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            text-align: left;
+            line-height: 2.5;
+        }
+
+        #lyricsContainer p {
+            margin-bottom: 10px;
+        }
+        
+        #lyricsContainer input[type="text"] {
+            width: 80px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin: 0 2px;
+            font-size: 0.9em;
+        }
+
+        .word-span {
+            margin: 0 2px;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px 15px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        #resetButton {
+            background-color: #95a5a6;
+        }
+        #resetButton:hover {
+            background-color: #7f8c8d;
+        }
+
+        .correct {
+            color: blue;
+            font-weight: bold;
+        }
+
+        .incorrect {
+            color: red;
+            font-weight: bold;
+        }
+        
+        .user-attempt {
+             /* 사용자 입력 텍스트에 대한 기본 스타일 (채점 후) */
+        }
+
+        .correct-answer-hint {
+            font-size: 0.8em;
+            color: #555;
+            margin-left: 5px;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 15px;
+            }
+            #lyricsContainer input[type="text"] {
+                width: 70px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img id="titleImage" height="10px" src="hd-logo.svg" alt="함께한대합창단">
+        
+        <div id="scoreHistory"></div>
+        
+        
+        <div id="lyricsContainer">
+            </div>
+        
+        <button id="checkButton">채점하기</button>
+        <button id="resetButton" style="display:none;">다시 연습하기</button>
+        
+    </div>
+
+    <script>
+        // --- 🎵 설정 🎵 ---
+        // 노래별 점수 저장을 위한 고유 ID (다른 노래를 추가할 때 이 값을 바꿔주세요)
+        const songId = "sid003_nara"; 
+        
+        // 화면에 표시할 최근 점수 개수
+        const count_current_score = 5;
+
+        const songTitle = "아름다운 나라";
+        // ❗ `!`가 붙은 단어는 문제로 출제되지 않습니다.
+        const songLyrics = `저 산자락에 긴 노을지면
+걸음걸음도 살며시 달님이 오시네
+밤 달빛에도 참 어여뻐라
+골목골목 선 담장은 달빛을 반기네
+
+겨울 눈꽃이 오롯이 앉으면
+그 포근한 흰 빛이 센 바람도 재우니
+
+참 아름다운 많은 꿈이있는
+이 땅에 태어나서 행복한 내가 아니냐
+
+큰 바다있고 푸른 하늘가진
+이 땅 위에 사는 나는 행복한 사람 아니냐
+
+!----------------
+강 물빛소리 산 낙엽소리
+천지사방이 고우니 즐겁지 않은가
+바람 꽃소리 들풀 젖는 소리
+아픈 청춘도 고우니 맘 즐겁지 않은가
+참 아름다운 많은 꿈이있는
+이 땅에 태어나서 행복한 내가 아니냐
+
+큰 바다있고 푸른 하늘가진
+이 땅 위에 사는 나는 행복한 사람 아니냐
+!----------------
+큰 추위로 견뎌낸 나무의 뿌리가
+봄 그리운 맘으로 푸르다
+푸르게 더 푸르게
+수만잎을 피워낸 한 줄기로
+하늘까지 뻗어라
+
+!우-- !아--
+많은 꿈이있는 
+이 땅 위에 태어나서 행복한 내가 아니냐
+큰 바다있고 푸른 하늘가진
+이 땅 위에 사는 나는 행복한 사람 아니냐
+아름다운 나라`;
+
+        const blankProbability = 0.3; 
+        
+        // --- 설정 끝 ---
+
+        const lyricsContainer = document.getElementById('lyricsContainer');
+        const checkButton = document.getElementById('checkButton');
+        const resetButton = document.getElementById('resetButton');
+        
+        const scoreHistoryDiv = document.getElementById('scoreHistory');
+
+        function displayScores() {
+            const storageKey = `lyricScores_${songId}`;
+            const scores = JSON.parse(localStorage.getItem(storageKey)) || [];
+            
+            if (scores.length > 0) {
+                scoreHistoryDiv.textContent = `최근 ${count_current_score}회 점수: ${scores.join('점, ')}점 🥇`;
+            } else {
+                scoreHistoryDiv.textContent = '아직 기록된 점수가 없습니다.';
+            }
+        }
+
+        function initializeGame() {
+            lyricsContainer.innerHTML = ''; 
+            
+            const lines = songLyrics.trim().split('\n');
+            
+            lines.forEach(lineText => {
+                const lineDiv = document.createElement('p');
+                const words = lineText.trim().split(/\s+/);
+
+                words.forEach(word => {
+                    if (!word) return;
+
+                    // ❗ 수정된 부분: 단어가 '!'로 시작하는지 확인
+                    if (word.startsWith('!')) {
+                        // '!'로 시작하면, '!'를 제거하고 항상 텍스트로 표시
+                        const span = document.createElement('span');
+                        span.textContent = word.substring(1); // '!' 제외한 나머지 문자열
+                        span.className = 'word-span';
+                        lineDiv.appendChild(span);
+                    } else {
+                        // '!'가 없는 단어는 기존 확률에 따라 빈칸 또는 텍스트로 처리
+                        if (Math.random() < blankProbability) {
+                            const input = document.createElement('input');
+                            input.type = 'text';
+                            input.dataset.originalWord = word; 
+                            input.setAttribute('aria-label', '가사 빈칸');
+                            lineDiv.appendChild(input);
+                        } else {
+                            const span = document.createElement('span');
+                            span.textContent = word;
+                            span.className = 'word-span';
+                            lineDiv.appendChild(span);
+                        }
+                    }
+                    lineDiv.appendChild(document.createTextNode(' ')); 
+                });
+                lyricsContainer.appendChild(lineDiv);
+            });
+
+            checkButton.style.display = 'block';
+            resetButton.style.display = 'none';
+        }
+
+        function checkAnswers() {
+            const inputs = lyricsContainer.querySelectorAll('input[type="text"]');
+            let correctCount = 0;
+            const totalBlanks = inputs.length;
+
+            if (totalBlanks === 0) {
+                alert("채점할 빈칸이 없습니다. 다시 시작해주세요.");
+                checkButton.style.display = 'none';
+                resetButton.style.display = 'block';
+                return;
+            }
+
+            inputs.forEach(input => {
+                const userValue = input.value.trim();
+                const originalWord = input.dataset.originalWord;
+                
+                const resultSpan = document.createElement('span');
+                const userAnswerSpan = document.createElement('span');
+                userAnswerSpan.textContent = userValue || "[입력안함]";
+                userAnswerSpan.className = 'user-attempt';
+
+                if (userValue.toLowerCase() === originalWord.toLowerCase()) {
+                    correctCount++;
+                    userAnswerSpan.classList.add('correct');
+                    resultSpan.appendChild(userAnswerSpan);
+                } else {
+                    userAnswerSpan.classList.add('incorrect');
+                    resultSpan.appendChild(userAnswerSpan);
+                    
+                    const hintSpan = document.createElement('span');
+                    hintSpan.className = 'correct-answer-hint';
+                    hintSpan.textContent = `(정답: ${originalWord})`;
+                    resultSpan.appendChild(hintSpan);
+                }
+                
+                input.parentNode.replaceChild(resultSpan, input);
+            });
+            
+            const score = Math.round((correctCount / totalBlanks) * 100);
+            
+            const storageKey = `lyricScores_${songId}`;
+            const scores = JSON.parse(localStorage.getItem(storageKey)) || [];
+            scores.unshift(score);
+            const recentScores = scores.slice(0, count_current_score); 
+            localStorage.setItem(storageKey, JSON.stringify(recentScores));
+
+            displayScores();
+
+            checkButton.style.display = 'none';
+            resetButton.style.display = 'block';
+        }
+
+        checkButton.addEventListener('click', checkAnswers);
+        resetButton.addEventListener('click', initializeGame);
+
+        displayScores();
+        initializeGame();
+    </script>
+</body>
+</html>
