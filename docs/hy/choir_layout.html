@@ -20,11 +20,20 @@
       flex: 1 1 30%; /* 유연하게 확장 및 축소 */
       min-width: 250px; /* 최소 너비 설정 */
     }
+    /* controls는 이제 part-buttons 옆에 위치하므로 margin-top 제거 */
     .controls {
-      margin-bottom: 20px;
       display: flex;
       gap: 10px;
       align-items: center;
+      flex-wrap: wrap; /* 작은 화면에서 줄바꿈되도록 */
+      flex-grow: 1; /* part-buttons 옆에서 남은 공간을 차지하도록 */
+      justify-content: flex-end; /* 오른쪽으로 정렬 */
+    }
+    .controls label {
+        white-space: nowrap; /* 줄 수: 텍스트 줄바꿈 방지 */
+    }
+    .controls input {
+        width: 50px; /* 입력 필드 너비 조정 */
     }
     .grid-row-wrapper {
       display: flex;
@@ -55,11 +64,18 @@
       outline: 3px solid #000;
       z-index: 10; /* 선택된 셀이 드래그 박스 위에 오도록 */
     }
+    .part-and-controls-area { /* 파트 버튼과 컨트롤을 감싸는 새로운 div */
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 20px;
+        align-items: center; /* 전체적으로 가운데 정렬 */
+        width: 100%; /* 부모의 100% 너비 사용 */
+    }
     .part-buttons {
       display: flex;
       flex-wrap: wrap; /* 버튼이 너무 많으면 줄바꿈 */
       gap: 10px;
-      margin-top: 20px;
       align-items: flex-start; /* 파트 인원 표시가 위로 정렬되도록 */
     }
     .part-buttons button {
@@ -83,6 +99,8 @@
     .btn-a { background: #facc15; color: black; }
     .btn-t { background: #3b82f6; color: white; }
     .btn-b { background: #22c55e; color: white; }
+    .btn-clear { background: #6b7280; color: white; } /* 해제 버튼 색상 */
+
     .selection-box {
       position: absolute;
       border: 2px dashed #000;
@@ -99,17 +117,20 @@
       white-space: nowrap; /* 줄바꿈 방지 */
     }
     .total-summary {
-      margin-top: 20px;
       font-weight: bold;
       background: #e0e7ff;
       padding: 8px 12px;
       border-radius: 6px;
       display: flex;
-      justify-content: space-between;
+      justify-content: center; /* 텍스트를 가운데 정렬 */
       align-items: center;
+      /* flex-grow: 1; 이전에는 남은 공간을 차지했지만 이제는 크기 고정 */
+      width: 120px; /* 적절한 고정 너비 설정 */
+      flex-shrink: 0; /* 공간이 부족해도 줄어들지 않도록 */
     }
     .total-summary strong {
         font-size: 16px;
+        margin-left: 5px; /* "총원:" 텍스트와의 간격 */
     }
 
     /* 기존 .right 섹션 제거에 따른 스타일 조정 */
@@ -129,50 +150,50 @@
             min-width: unset;
             width: 100%;
         }
-        .controls {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-        .controls label {
-            width: 100%;
-            margin-bottom: 5px;
+        .part-and-controls-area {
+            flex-direction: column; /* 모바일에서 세로로 정렬 */
+            align-items: center;
         }
         .part-buttons {
             justify-content: center;
+            width: 100%; /* 버튼이 중앙에 오도록 */
+        }
+        .controls {
+            justify-content: center; /* 컨트롤도 중앙 정렬 */
+            width: 100%;
+            margin-top: 10px; /* 간격 조정 */
         }
     }
   </style>
 </head>
 <body>
   <div class="left">
-
-
     <!-- 각 줄별로 래퍼를 추가하여 요약 정보를 옆에 붙일 수 있도록 합니다 -->
     <div id="grid-wrapper"></div>
 
-    <div class="part-buttons">
-      <button class="btn-s" data-part="S">S <span class="part-count" id="count-s">0</span></button>
-      <button class="btn-a" data-part="A">A <span class="part-count" id="count-a">0</span></button>
-      <button class="btn-t" data-part="T">T <span class="part-count" id="count-t">0</span></button>
-      <button class="btn-b" data-part="B">B <span class="part-count" id="count-b">0</span></button>
-      <div class="total-summary">
-        총원: <strong id="total-all-count">0</strong>명
-      </div>
-    </div>
-    <div class="controls">
-      <label>줄 수: <input type="number" id="rows" value="7" min="1"></label>
-      <label>좌석 수: <input type="number" id="cols" value="16" min="1"></label>
-      <button id="generate">생성</button>
-    </div>    
-  </div>
+    <!-- 파트 버튼과 컨트롤을 감싸는 새로운 컨테이너 -->
+    <div class="part-and-controls-area">
+        <div class="part-buttons">
+          <button class="btn-s" data-part="S">S <span class="part-count" id="count-s">0</span></button>
+          <button class="btn-a" data-part="A">A <span class="part-count" id="count-a">0</span></button>
+          <button class="btn-t" data-part="T">T <span class="part-count" id="count-t">0</span></button>
+          <button class="btn-b" data-part="B">B <span class="part-count" id="count-b">0</span></button>
+          <!-- 해제 버튼 추가 -->
+          <button class="btn-clear" data-part="X">X <span class="part-count" id="count-x">0</span></button>
+        </div>
 
-  <!-- 기존 .right 섹션은 필요 없으므로 삭제하거나 숨김 처리 -->
-  <!-- <div class="right">
-    <h3>줄별 현황</h3>
-    <div id="rowSummary"></div>
-    <h3>전체 합계</h3>
-    <div id="totalSummary"></div>
-  </div> -->
+        <div class="total-summary">
+            총원: <strong id="total-all-count">0</strong>명
+        </div>
+
+        <!-- 이전에 상단에 있던 controls div가 여기로 이동합니다 -->
+        <div class="controls">
+          <label>줄 수: <input type="number" id="rows" value="7" min="1"></label>
+          <label>좌석 수: <input type="number" id="cols" value="16" min="1"></label>
+          <button id="generate">생성</button>
+        </div>
+    </div>
+  </div>
 
   <script>
     const gridWrapper = document.getElementById("grid-wrapper");
@@ -181,6 +202,7 @@
     const partCountA = document.getElementById("count-a");
     const partCountT = document.getElementById("count-t");
     const partCountB = document.getElementById("count-b");
+    const partCountX = document.getElementById("count-x"); // X 버튼 카운트
     const totalAllCount = document.getElementById("total-all-count");
 
     const partColors = {
@@ -188,6 +210,7 @@
       A: "#facc15", // yellow
       T: "#3b82f6", // blue
       B: "#22c55e", // green
+      X: "#e5e7eb", // gray (초기 셀 색상과 동일)
     };
 
     let selectedCells = [];
@@ -217,6 +240,8 @@
           cell.className = "cell";
           cell.dataset.row = row;
           cell.dataset.col = col;
+          // 초기 상태는 배치되지 않은 상태 (X)로 간주
+          cell.dataset.part = "X";
           gridRow.appendChild(cell);
           gridElements.push(cell); // 배열에 셀 추가
         }
@@ -236,11 +261,12 @@
       selectedCells = [];
     }
 
+    // 스크롤 오프셋을 고려한 클라이언트 좌표를 사용합니다.
     function getRelativeCoordinates(event) {
         if (event.touches) { // 터치 이벤트
-            return { x: event.touches[0].clientX, y: event.touches[0].clientY }; // clientX/Y 사용
+            return { x: event.touches[0].clientX, y: event.touches[0].clientY };
         } else { // 마우스 이벤트
-            return { x: event.clientX, y: event.clientY }; // clientX/Y 사용
+            return { x: event.clientX, y: event.clientY };
         }
     }
 
@@ -262,18 +288,21 @@
 
     function updateSummary() {
       let totalAll = 0;
-      const partTotals = { S:0, A:0, T:0, B:0 };
+      // X를 포함한 파트별 총계를 계산합니다.
+      const partTotals = { S:0, A:0, T:0, B:0, X:0 };
+      const totalGridCells = rows * cols; // 전체 격자 수
 
       for (let r = 0; r < rows; r++) {
-        // const rowCells = gridContainer.querySelectorAll(`.cell[data-row='${r}']`); // gridContainer 대신 gridWrapper 내에서 찾기
         const rowCells = gridElements.filter(cell => parseInt(cell.dataset.row) === r);
         let total = 0;
-        const partCountsInRow = { S:0, A:0, T:0, B:0 };
+        const partCountsInRow = { S:0, A:0, T:0, B:0, X:0 };
 
         rowCells.forEach(cell => {
           const part = cell.dataset.part;
           if (part) {
-            total++;
+            if (part !== 'X') { // 'X' 파트는 총원에 포함하지 않습니다.
+                total++;
+            }
             partTotals[part]++;
             partCountsInRow[part]++;
           }
@@ -284,8 +313,9 @@
         if (rowSummaryInline) {
             if (total > 0) {
                 const summaryParts = [];
+                // X를 제외한 파트만 요약에 표시
                 for (const partKey in partCountsInRow) {
-                    if (partCountsInRow[partKey] > 0) {
+                    if (partKey !== 'X' && partCountsInRow[partKey] > 0) {
                         summaryParts.push(`${partKey}:${partCountsInRow[partKey]}`);
                     }
                 }
@@ -302,6 +332,7 @@
       partCountA.textContent = partTotals.A;
       partCountT.textContent = partTotals.T;
       partCountB.textContent = partTotals.B;
+      partCountX.textContent = partTotals.X; // 배치되지 않은 좌석 수 표시
     }
 
     // 터치/마우스 이벤트 시작
@@ -331,7 +362,7 @@
         selectionBox.style.width = w + "px";
         selectionBox.style.height = h + "px";
         selectCellsInBox(startX, startY, coords.x, coords.y);
-        e.preventDefault(); // 터치 스크롤 방지
+        e.preventDefault(); // 기본 터치(스크롤 등) 동작 방지
       }
     }
 
@@ -352,7 +383,6 @@
     document.addEventListener("mouseup", handleEnd);
 
     // 터치 이벤트 리스너 추가
-    // passive: false를 유지하여 preventDefault()가 작동하도록 합니다.
     document.addEventListener("touchstart", handleStart, { passive: false });
     document.addEventListener("touchmove", handleMove, { passive: false });
     document.addEventListener("touchend", handleEnd);
@@ -369,11 +399,11 @@
       const key = e.key.toUpperCase();
       if (["S","A","T","B"].includes(key)) {
         applyPart(key);
-      } else if (e.key === "Delete" || e.key === "Backspace") {
+      } else if (e.key === "Delete" || e.key === "Backspace" || key === "X") { // X 키 추가
         selectedCells.forEach(cell => {
           cell.textContent = "";
-          cell.style.background = "#e5e7eb";
-          cell.dataset.part = "";
+          cell.style.background = partColors.X; // X 파트 색상 적용
+          cell.dataset.part = "X"; // 파트를 'X'로 설정
         });
         updateSummary();
         clearSelection(); // 삭제 후 선택 해제
@@ -382,7 +412,7 @@
 
     function applyPart(part) {
       selectedCells.forEach(cell => {
-        cell.textContent = part;
+        cell.textContent = (part === 'X' ? '' : part); // X일 때는 텍스트 표시 안함
         cell.style.background = partColors[part];
         cell.dataset.part = part;
       });
