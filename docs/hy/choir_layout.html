@@ -335,16 +335,31 @@
       partCountX.textContent = partTotals.X; // 배치되지 않은 좌석 수 표시
     }
 
+
     // 터치/마우스 이벤트 시작
     function handleStart(e) {
-      if (e.target.closest(".grid") || e.target.classList.contains("cell")) { // 셀 또는 그리드 배경 클릭 시
+      if (e.target.closest(".grid") || e.target.classList.contains("cell")) {
         isDragging = true;
-        const coords = getRelativeCoordinates(e);
-        startX = coords.x;
-        startY = coords.y;
+        const coords = getRelativeCoordinates(e); // clientX/Y
+        startX = coords.x; // clientX
+        startY = coords.y; // clientY
+
         selectionBox = document.createElement("div");
         selectionBox.className = "selection-box";
         document.body.appendChild(selectionBox);
+
+        // selectionBox의 초기 위치도 clientX/Y를 사용하여 설정합니다.
+        // 그리고 body가 아닌, gridWrapper에 바로 추가하여 상대적인 위치를 사용합니다.
+        // (단, 이렇게 하면 selectionBox가 gridWrapper의 크기를 넘어가지 못합니다.)
+        // body에 계속 추가하고 clientX/Y를 사용하는 것이 더 범용적입니다.
+        // 여기서는 body에 추가하는 기존 방식을 유지하되, clientX/Y로 위치를 정확히 잡겠습니다.
+
+        // 초기 박스 위치 설정 (작은 사각형으로 시작)
+        selectionBox.style.left = startX + "px";
+        selectionBox.style.top = startY + "px";
+        selectionBox.style.width = "0px";
+        selectionBox.style.height = "0px";
+
         e.preventDefault(); // 기본 터치(스크롤 등) 동작 방지
       }
     }
@@ -352,16 +367,23 @@
     // 터치/마우스 이벤트 이동
     function handleMove(e) {
       if (isDragging && selectionBox) {
-        const coords = getRelativeCoordinates(e);
-        const x = Math.min(coords.x, startX);
-        const y = Math.min(coords.y, startY);
-        const w = Math.abs(coords.x - startX);
-        const h = Math.abs(coords.y - startY);
+        const coords = getRelativeCoordinates(e); // clientX/Y
+        const currentX = coords.x; // clientX
+        const currentY = coords.y; // clientY
+
+        // selectionBox의 CSS top/left/width/height를 clientX/Y 기준으로 계산합니다.
+        const x = Math.min(currentX, startX);
+        const y = Math.min(currentY, startY);
+        const w = Math.abs(currentX - startX);
+        const h = Math.abs(currentY - startY);
+
         selectionBox.style.left = x + "px";
         selectionBox.style.top = y + "px";
         selectionBox.style.width = w + "px";
         selectionBox.style.height = h + "px";
-        selectCellsInBox(startX, startY, coords.x, coords.y);
+
+        // selectCellsInBox 함수는 이미 clientX/Y 기준으로 셀 Rect를 비교하고 있으므로 변경 없음
+        selectCellsInBox(startX, startY, currentX, currentY);
         e.preventDefault(); // 기본 터치(스크롤 등) 동작 방지
       }
     }
