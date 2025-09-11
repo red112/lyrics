@@ -9,23 +9,34 @@
       font-family: sans-serif;
       padding: 20px;
       display: flex;
+      flex-wrap: wrap; /* 작은 화면에서 요소들이 줄바꿈되도록 */
       gap: 20px;
     }
     .left {
-      flex: none;
+      flex: 1 1 60%; /* 유연하게 확장 및 축소 */
+      min-width: 400px; /* 최소 너비 설정 */
     }
     .right {
-      flex: none;
+      flex: 1 1 30%; /* 유연하게 확장 및 축소 */
+      min-width: 250px; /* 최소 너비 설정 */
     }
     .controls {
       margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .grid-row-wrapper {
+      display: flex;
+      align-items: center; /* rowSummary가 셀과 같은 높이에 중앙 정렬 */
+      margin-bottom: 4px; /* 각 줄 사이 간격 */
     }
     .grid {
       display: grid;
       gap: 4px;
-      margin-bottom: 20px;
       position: relative;
       user-select: none;
+      flex-grow: 1; /* 그리드가 사용 가능한 공간을 채우도록 */
     }
     .cell {
       width: 40px;
@@ -38,18 +49,35 @@
       cursor: pointer;
       font-weight: bold;
       font-size: 14px;
+      box-sizing: border-box; /* padding, border가 너비에 포함되도록 */
     }
     .cell.selected {
       outline: 3px solid #000;
+      z-index: 10; /* 선택된 셀이 드래그 박스 위에 오도록 */
+    }
+    .part-buttons {
+      display: flex;
+      flex-wrap: wrap; /* 버튼이 너무 많으면 줄바꿈 */
+      gap: 10px;
+      margin-top: 20px;
+      align-items: flex-start; /* 파트 인원 표시가 위로 정렬되도록 */
     }
     .part-buttons button {
-      margin-right: 5px;
       padding: 8px 12px;
       font-size: 14px;
       font-weight: bold;
       border: none;
       border-radius: 6px;
       cursor: pointer;
+      display: flex;
+      flex-direction: column; /* 텍스트와 숫자를 세로로 정렬 */
+      align-items: center;
+      min-width: 60px; /* 버튼 최소 너비 */
+    }
+    .part-count {
+      font-size: 12px;
+      margin-top: 2px;
+      opacity: 0.8;
     }
     .btn-s { background: #ef4444; color: white; }
     .btn-a { background: #facc15; color: black; }
@@ -60,17 +88,58 @@
       border: 2px dashed #000;
       background: rgba(0,0,0,0.1);
       pointer-events: none;
+      z-index: 5; /* 셀보다 아래, 그리드 위에 */
     }
-    .row-summary, .total-summary {
-      margin-bottom: 8px;
-      font-size: 14px;
+    .row-summary-inline {
+      margin-left: 10px;
+      font-size: 13px;
       padding: 4px 8px;
       background: #f3f4f6;
       border-radius: 6px;
+      white-space: nowrap; /* 줄바꿈 방지 */
     }
     .total-summary {
+      margin-top: 20px;
       font-weight: bold;
       background: #e0e7ff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .total-summary strong {
+        font-size: 16px;
+    }
+
+    /* 기존 .right 섹션 제거에 따른 스타일 조정 */
+    .right h3 {
+        display: none; /* 필요 없으므로 숨김 */
+    }
+    #rowSummary, #totalSummary {
+        display: none; /* 기존 요약 컨테이너 숨김 */
+    }
+
+    /* 모바일 반응형 */
+    @media (max-width: 768px) {
+        body {
+            flex-direction: column;
+        }
+        .left, .right {
+            min-width: unset;
+            width: 100%;
+        }
+        .controls {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .controls label {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        .part-buttons {
+            justify-content: center;
+        }
     }
   </style>
 </head>
@@ -82,28 +151,36 @@
       <button id="generate">생성</button>
     </div>
 
-    <div id="grid" class="grid"></div>
+    <!-- 각 줄별로 래퍼를 추가하여 요약 정보를 옆에 붙일 수 있도록 합니다 -->
+    <div id="grid-wrapper"></div>
 
     <div class="part-buttons">
-      <button class="btn-s" data-part="S">S</button>
-      <button class="btn-a" data-part="A">A</button>
-      <button class="btn-t" data-part="T">T</button>
-      <button class="btn-b" data-part="B">B</button>
+      <button class="btn-s" data-part="S">S <span class="part-count" id="count-s">0</span></button>
+      <button class="btn-a" data-part="A">A <span class="part-count" id="count-a">0</span></button>
+      <button class="btn-t" data-part="T">T <span class="part-count" id="count-t">0</span></button>
+      <button class="btn-b" data-part="B">B <span class="part-count" id="count-b">0</span></button>
+      <div class="total-summary">
+        총원: <strong id="total-all-count">0</strong>명
+      </div>
     </div>
   </div>
 
-  <div class="right">
+  <!-- 기존 .right 섹션은 필요 없으므로 삭제하거나 숨김 처리 -->
+  <!-- <div class="right">
     <h3>줄별 현황</h3>
     <div id="rowSummary"></div>
     <h3>전체 합계</h3>
     <div id="totalSummary"></div>
-  </div>
+  </div> -->
 
   <script>
-    const gridContainer = document.getElementById("grid");
+    const gridWrapper = document.getElementById("grid-wrapper");
     const generateBtn = document.getElementById("generate");
-    const rowSummaryContainer = document.getElementById("rowSummary");
-    const totalSummaryContainer = document.getElementById("totalSummary");
+    const partCountS = document.getElementById("count-s");
+    const partCountA = document.getElementById("count-a");
+    const partCountT = document.getElementById("count-t");
+    const partCountB = document.getElementById("count-b");
+    const totalAllCount = document.getElementById("total-all-count");
 
     const partColors = {
       S: "#ef4444", // red
@@ -116,21 +193,39 @@
     let isDragging = false;
     let startX, startY, selectionBox;
     let rows = 7, cols = 16;
+    let gridElements = []; // 셀 요소를 저장할 배열
 
     function generateGrid(r, c) {
       rows = r;
       cols = c;
-      gridContainer.innerHTML = "";
-      gridContainer.style.gridTemplateColumns = `repeat(${c}, 40px)`;
+      gridWrapper.innerHTML = "";
+      gridElements = []; // 초기화
 
       for (let row = 0; row < r; row++) {
+        const rowWrapper = document.createElement("div");
+        rowWrapper.className = "grid-row-wrapper";
+        rowWrapper.dataset.row = row; // 줄 번호를 래퍼에도 추가
+
+        const gridRow = document.createElement("div"); // 실제 셀들이 들어갈 그리드
+        gridRow.className = "grid";
+        gridRow.style.gridTemplateColumns = `repeat(${c}, 40px)`;
+        rowWrapper.appendChild(gridRow);
+
         for (let col = 0; col < c; col++) {
           const cell = document.createElement("div");
           cell.className = "cell";
           cell.dataset.row = row;
           cell.dataset.col = col;
-          gridContainer.appendChild(cell);
+          gridRow.appendChild(cell);
+          gridElements.push(cell); // 배열에 셀 추가
         }
+
+        const rowSummaryInline = document.createElement("div");
+        rowSummaryInline.className = "row-summary-inline";
+        rowSummaryInline.id = `row-summary-${row}`; // 각 줄별 고유 ID 부여
+        rowWrapper.appendChild(rowSummaryInline);
+
+        gridWrapper.appendChild(rowWrapper);
       }
       updateSummary();
     }
@@ -140,10 +235,17 @@
       selectedCells = [];
     }
 
+    function getRelativeCoordinates(event) {
+        if (event.touches) { // 터치 이벤트
+            return { x: event.touches[0].pageX, y: event.touches[0].pageY };
+        } else { // 마우스 이벤트
+            return { x: event.pageX, y: event.pageY };
+        }
+    }
+
     function selectCellsInBox(x1, y1, x2, y2) {
       clearSelection();
-      const cells = gridContainer.querySelectorAll(".cell");
-      cells.forEach(cell => {
+      gridElements.forEach(cell => { // gridElements 배열 사용
         const rect = cell.getBoundingClientRect();
         if (
           rect.left < Math.max(x1, x2) &&
@@ -158,85 +260,82 @@
     }
 
     function updateSummary() {
-      rowSummaryContainer.innerHTML = "";
       let totalAll = 0;
       const partTotals = { S:0, A:0, T:0, B:0 };
 
       for (let r = 0; r < rows; r++) {
-        const rowCells = gridContainer.querySelectorAll(`.cell[data-row='${r}']`);
+        // const rowCells = gridContainer.querySelectorAll(`.cell[data-row='${r}']`); // gridContainer 대신 gridWrapper 내에서 찾기
+        const rowCells = gridElements.filter(cell => parseInt(cell.dataset.row) === r);
         let total = 0;
-        const order = [];
+        const partCountsInRow = { S:0, A:0, T:0, B:0 };
+
         rowCells.forEach(cell => {
           const part = cell.dataset.part;
           if (part) {
             total++;
-            order.push(part);
             partTotals[part]++;
+            partCountsInRow[part]++;
           }
         });
         totalAll += total;
 
-        if (total > 0) {
-          // 파트별 연속된 구간을 요약
-          const summaryParts = [];
-          let currentPart = order[0], count = 1;
-          for (let i = 1; i < order.length; i++) {
-            if (order[i] === currentPart) {
-              count++;
+        const rowSummaryInline = document.getElementById(`row-summary-${r}`);
+        if (rowSummaryInline) {
+            if (total > 0) {
+                const summaryParts = [];
+                for (const partKey in partCountsInRow) {
+                    if (partCountsInRow[partKey] > 0) {
+                        summaryParts.push(`${partKey}:${partCountsInRow[partKey]}`);
+                    }
+                }
+                rowSummaryInline.textContent = `총 ${total}명 | ${summaryParts.join(" ")}`;
             } else {
-              summaryParts.push(`${currentPart}:${count}`);
-              currentPart = order[i];
-              count = 1;
+                rowSummaryInline.textContent = `배치 없음`;
             }
-          }
-          if (currentPart) summaryParts.push(`${currentPart}:${count}`);
-
-          const div = document.createElement("div");
-          div.className = "row-summary";
-          div.textContent = `${r+1}열 → 총 ${total}명 | ${summaryParts.join(" ")}`;
-          rowSummaryContainer.appendChild(div);
-        } else {
-          const div = document.createElement("div");
-          div.className = "row-summary";
-          div.textContent = `${r+1}열 → 배치 없음`;
-          rowSummaryContainer.appendChild(div);
         }
       }
 
-      // 전체 합계 표시
-      totalSummaryContainer.innerHTML = "";
-      const div = document.createElement("div");
-      div.className = "total-summary";
-      div.textContent = `전체 합계 → 총 ${totalAll}명 | S:${partTotals.S} A:${partTotals.A} T:${partTotals.T} B:${partTotals.B}`;
-      totalSummaryContainer.appendChild(div);
+      // 전체 합계 및 파트별 인원 표시
+      totalAllCount.textContent = totalAll;
+      partCountS.textContent = partTotals.S;
+      partCountA.textContent = partTotals.A;
+      partCountT.textContent = partTotals.T;
+      partCountB.textContent = partTotals.B;
     }
 
-    document.addEventListener("mousedown", (e) => {
+    // 터치/마우스 이벤트 시작
+    function handleStart(e) {
       if (e.target.closest(".grid")) {
         isDragging = true;
-        startX = e.pageX;
-        startY = e.pageY;
+        const coords = getRelativeCoordinates(e);
+        startX = coords.x;
+        startY = coords.y;
         selectionBox = document.createElement("div");
         selectionBox.className = "selection-box";
         document.body.appendChild(selectionBox);
+        e.preventDefault(); // 터치 스크롤 방지
       }
-    });
+    }
 
-    document.addEventListener("mousemove", (e) => {
+    // 터치/마우스 이벤트 이동
+    function handleMove(e) {
       if (isDragging && selectionBox) {
-        const x = Math.min(e.pageX, startX);
-        const y = Math.min(e.pageY, startY);
-        const w = Math.abs(e.pageX - startX);
-        const h = Math.abs(e.pageY - startY);
+        const coords = getRelativeCoordinates(e);
+        const x = Math.min(coords.x, startX);
+        const y = Math.min(coords.y, startY);
+        const w = Math.abs(coords.x - startX);
+        const h = Math.abs(coords.y - startY);
         selectionBox.style.left = x + "px";
         selectionBox.style.top = y + "px";
         selectionBox.style.width = w + "px";
         selectionBox.style.height = h + "px";
-        selectCellsInBox(startX, startY, e.pageX, e.pageY);
+        selectCellsInBox(startX, startY, coords.x, coords.y);
+        e.preventDefault(); // 터치 스크롤 방지
       }
-    });
+    }
 
-    document.addEventListener("mouseup", () => {
+    // 터치/마우스 이벤트 종료
+    function handleEnd() {
       if (isDragging) {
         isDragging = false;
         if (selectionBox) {
@@ -244,11 +343,23 @@
           selectionBox = null;
         }
       }
-    });
+    }
+
+
+    document.addEventListener("mousedown", handleStart);
+    document.addEventListener("mousemove", handleMove);
+    document.addEventListener("mouseup", handleEnd);
+
+    // 터치 이벤트 리스너 추가
+    document.addEventListener("touchstart", handleStart, { passive: false });
+    document.addEventListener("touchmove", handleMove, { passive: false });
+    document.addEventListener("touchend", handleEnd);
+
 
     document.querySelectorAll(".part-buttons button").forEach((btn) => {
       btn.addEventListener("click", () => {
-        applyPart(btn.dataset.part);
+        const part = btn.dataset.part;
+        if (part) applyPart(part);
       });
     });
 
@@ -263,6 +374,7 @@
           cell.dataset.part = "";
         });
         updateSummary();
+        clearSelection(); // 삭제 후 선택 해제
       }
     });
 
@@ -273,6 +385,7 @@
         cell.dataset.part = part;
       });
       updateSummary();
+      clearSelection(); // 파트 적용 후 선택 해제
     }
 
     generateBtn.addEventListener("click", () => {
