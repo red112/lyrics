@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>합창단 좌석 배치</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      display: flex;
+      gap: 20px;
+    }
+    .left {
+      flex: none;
+    }
+    .right {
+      flex: none;
+    }
+    .controls {
+      margin-bottom: 20px;
+    }
+    .grid {
+      display: grid;
+      gap: 4px;
+      margin-bottom: 20px;
+      position: relative;
+      user-select: none;
+    }
+    .cell {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #e5e7eb; /* gray */
+      border: 1px solid #9ca3af;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .cell.selected {
+      outline: 3px solid #000;
+    }
+    .part-buttons button {
+      margin-right: 5px;
+      padding: 8px 12px;
+      font-size: 14px;
+      font-weight: bold;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .btn-s { background: #ef4444; color: white; }
+    .btn-a { background: #facc15; color: black; }
+    .btn-t { background: #3b82f6; color: white; }
+    .btn-b { background: #22c55e; color: white; }
+    .selection-box {
+      position: absolute;
+      border: 2px dashed #000;
+      background: rgba(0,0,0,0.1);
+      pointer-events: none;
+    }
+    .row-summary, .total-summary {
+      margin-bottom: 8px;
+      font-size: 14px;
+      padding: 4px 8px;
+      background: #f3f4f6;
+      border-radius: 6px;
+    }
+    .total-summary {
+      font-weight: bold;
+      background: #e0e7ff;
+    }
+  </style>
+</head>
+<body>
+  <div class="left">
+    <div class="controls">
+      <label>줄 수: <input type="number" id="rows" value="7" min="1"></label>
+      <label>좌석 수: <input type="number" id="cols" value="16" min="1"></label>
+      <button id="generate">생성</button>
+    </div>
+
+    <div id="grid" class="grid"></div>
+
+    <div class="part-buttons">
+      <button class="btn-s" data-part="S">S</button>
+      <button class="btn-a" data-part="A">A</button>
+      <button class="btn-t" data-part="T">T</button>
+      <button class="btn-b" data-part="B">B</button>
+    </div>
+  </div>
+
+  <div class="right">
+    <h3>줄별 현황</h3>
+    <div id="rowSummary"></div>
+    <h3>전체 합계</h3>
+    <div id="totalSummary"></div>
+  </div>
+
+  <script>
+    const gridContainer = document.getElementById("grid");
+    const generateBtn = document.getElementById("generate");
+    const rowSummaryContainer = document.getElementById("rowSummary");
+    const totalSummaryContainer = document.getElementById("totalSummary");
+
+    const partColors = {
+      S: "#ef4444", // red
+      A: "#facc15", // yellow
+      T: "#3b82f6", // blue
+      B: "#22c55e", // green
+    };
+
+    let selectedCells = [];
+    let isDragging = false;
+    let startX, startY, selectionBox;
+    let rows = 7, cols = 16;
+
+    function generateGrid(r, c) {
+      rows = r;
+      cols = c;
+      gridContainer.innerHTML = "";
+      gridContainer.style.gridTemplateColumns = `repeat(${c}, 40px)`;
+
+      for (let row = 0; row < r; row++) {
+        for (let col = 0; col < c; col++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.dataset.row = row;
+          cell.dataset.col = col;
+          gridContainer.appendChild(cell);
+        }
+      }
+      updateSummary();
+    }
+
+    function clearSelection() {
+      selectedCells.forEach(cell => cell.classList.remove("selected"));
+      selectedCells = [];
+    }
+
+    function selectCellsInBox(x1, y1, x2, y2) {
+      clearSelection();
+      const cells = gridContainer.querySelectorAll(".cell");
+      cells.forEach(cell => {
+        const rect = cell.getBoundingClientRect();
+        if (
+          rect.left < Math.max(x1, x2) &&
+          rect.right > Math.min(x1, x2) &&
+          rect.top < Math.max(y1, y2) &&
+          rect.bottom > Math.min(y1, y2)
+        ) {
+          cell.classList.add("selected");
+          selectedCells.push(cell);
+        }
+      });
+    }
+
+    function updateSummary() {
+      rowSummaryContainer.innerHTML = "";
+      let totalAll = 0;
+      const partTotals = { S:0, A:0, T:0, B:0 };
+
+      for (let r = 0; r < rows; r++) {
+        const rowCells = gridContainer.querySelectorAll(`.cell[data-row='${r}']`);
+        let total = 0;
+        const order = [];
+        rowCells.forEach(cell => {
+          const part = cell.dataset.part;
+          if (part) {
+            total++;
+            order.push(part);
+            partTotals[part]++;
+          }
+        });
+        totalAll += total;
+
+        if (total > 0) {
+          // 파트별 연속된 구간을 요약
+          const summaryParts = [];
+          let currentPart = order[0], count = 1;
+          for (let i = 1; i < order.length; i++) {
+            if (order[i] === currentPart) {
+              count++;
+            } else {
+              summaryParts.push(`${currentPart}:${count}`);
+              currentPart = order[i];
+              count = 1;
+            }
+          }
+          if (currentPart) summaryParts.push(`${currentPart}:${count}`);
+
+          const div = document.createElement("div");
+          div.className = "row-summary";
+          div.textContent = `${r+1}열 → 총 ${total}명 | ${summaryParts.join(" ")}`;
+          rowSummaryContainer.appendChild(div);
+        } else {
+          const div = document.createElement("div");
+          div.className = "row-summary";
+          div.textContent = `${r+1}열 → 배치 없음`;
+          rowSummaryContainer.appendChild(div);
+        }
+      }
+
+      // 전체 합계 표시
+      totalSummaryContainer.innerHTML = "";
+      const div = document.createElement("div");
+      div.className = "total-summary";
+      div.textContent = `전체 합계 → 총 ${totalAll}명 | S:${partTotals.S} A:${partTotals.A} T:${partTotals.T} B:${partTotals.B}`;
+      totalSummaryContainer.appendChild(div);
+    }
+
+    document.addEventListener("mousedown", (e) => {
+      if (e.target.closest(".grid")) {
+        isDragging = true;
+        startX = e.pageX;
+        startY = e.pageY;
+        selectionBox = document.createElement("div");
+        selectionBox.className = "selection-box";
+        document.body.appendChild(selectionBox);
+      }
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (isDragging && selectionBox) {
+        const x = Math.min(e.pageX, startX);
+        const y = Math.min(e.pageY, startY);
+        const w = Math.abs(e.pageX - startX);
+        const h = Math.abs(e.pageY - startY);
+        selectionBox.style.left = x + "px";
+        selectionBox.style.top = y + "px";
+        selectionBox.style.width = w + "px";
+        selectionBox.style.height = h + "px";
+        selectCellsInBox(startX, startY, e.pageX, e.pageY);
+      }
+    });
+
+    document.addEventListener("mouseup", () => {
+      if (isDragging) {
+        isDragging = false;
+        if (selectionBox) {
+          selectionBox.remove();
+          selectionBox = null;
+        }
+      }
+    });
+
+    document.querySelectorAll(".part-buttons button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        applyPart(btn.dataset.part);
+      });
+    });
+
+    document.addEventListener("keydown", (e) => {
+      const key = e.key.toUpperCase();
+      if (["S","A","T","B"].includes(key)) {
+        applyPart(key);
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        selectedCells.forEach(cell => {
+          cell.textContent = "";
+          cell.style.background = "#e5e7eb";
+          cell.dataset.part = "";
+        });
+        updateSummary();
+      }
+    });
+
+    function applyPart(part) {
+      selectedCells.forEach(cell => {
+        cell.textContent = part;
+        cell.style.background = partColors[part];
+        cell.dataset.part = part;
+      });
+      updateSummary();
+    }
+
+    generateBtn.addEventListener("click", () => {
+      const r = parseInt(document.getElementById("rows").value);
+      const c = parseInt(document.getElementById("cols").value);
+      generateGrid(r, c);
+    });
+
+    // 초기 생성 (7줄 16좌석)
+    generateGrid(7, 16);
+  </script>
+</body>
+</html>
