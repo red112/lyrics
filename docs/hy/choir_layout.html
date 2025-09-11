@@ -145,11 +145,7 @@
 </head>
 <body>
   <div class="left">
-    <div class="controls">
-      <label>줄 수: <input type="number" id="rows" value="7" min="1"></label>
-      <label>좌석 수: <input type="number" id="cols" value="16" min="1"></label>
-      <button id="generate">생성</button>
-    </div>
+
 
     <!-- 각 줄별로 래퍼를 추가하여 요약 정보를 옆에 붙일 수 있도록 합니다 -->
     <div id="grid-wrapper"></div>
@@ -163,6 +159,11 @@
         총원: <strong id="total-all-count">0</strong>명
       </div>
     </div>
+    <div class="controls">
+      <label>줄 수: <input type="number" id="rows" value="7" min="1"></label>
+      <label>좌석 수: <input type="number" id="cols" value="16" min="1"></label>
+      <button id="generate">생성</button>
+    </div>    
   </div>
 
   <!-- 기존 .right 섹션은 필요 없으므로 삭제하거나 숨김 처리 -->
@@ -237,9 +238,9 @@
 
     function getRelativeCoordinates(event) {
         if (event.touches) { // 터치 이벤트
-            return { x: event.touches[0].pageX, y: event.touches[0].pageY };
+            return { x: event.touches[0].clientX, y: event.touches[0].clientY }; // clientX/Y 사용
         } else { // 마우스 이벤트
-            return { x: event.pageX, y: event.pageY };
+            return { x: event.clientX, y: event.clientY }; // clientX/Y 사용
         }
     }
 
@@ -305,7 +306,7 @@
 
     // 터치/마우스 이벤트 시작
     function handleStart(e) {
-      if (e.target.closest(".grid")) {
+      if (e.target.closest(".grid") || e.target.classList.contains("cell")) { // 셀 또는 그리드 배경 클릭 시
         isDragging = true;
         const coords = getRelativeCoordinates(e);
         startX = coords.x;
@@ -313,7 +314,7 @@
         selectionBox = document.createElement("div");
         selectionBox.className = "selection-box";
         document.body.appendChild(selectionBox);
-        e.preventDefault(); // 터치 스크롤 방지
+        e.preventDefault(); // 기본 터치(스크롤 등) 동작 방지
       }
     }
 
@@ -351,6 +352,7 @@
     document.addEventListener("mouseup", handleEnd);
 
     // 터치 이벤트 리스너 추가
+    // passive: false를 유지하여 preventDefault()가 작동하도록 합니다.
     document.addEventListener("touchstart", handleStart, { passive: false });
     document.addEventListener("touchmove", handleMove, { passive: false });
     document.addEventListener("touchend", handleEnd);
