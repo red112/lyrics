@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>우리 - 천안레이디싱어즈</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
+        }
+
+        #titleImage {
+            width: 100%;
+            height: auto;
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        #scoreHistory {
+            text-align: center;
+            color: #555;
+            background-color: #ecf0f1;
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        #lyricsContainer {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            text-align: left;
+            line-height: 2;
+        }
+
+        #lyricsContainer p {
+            margin-bottom: 10px;
+        }
+        
+        #lyricsContainer input[type="text"] {
+            width: 80px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin: 0 2px;
+            font-size: 0.9em;
+        }
+
+        .word-span {
+            margin: 0 2px;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px 15px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        #resetButton {
+            background-color: #95a5a6;
+        }
+        #resetButton:hover {
+            background-color: #7f8c8d;
+        }
+
+        .correct {
+            color: blue;
+            font-weight: bold;
+        }
+
+        .incorrect {
+            color: red;
+            font-weight: bold;
+        }
+        
+        .user-attempt {
+             /* 사용자 입력 텍스트에 대한 기본 스타일 (채점 후) */
+        }
+
+        .correct-answer-hint {
+            font-size: 0.8em;
+            color: #555;
+            margin-left: 5px;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 15px;
+            }
+            #lyricsContainer input[type="text"] {
+                width: 70px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img id="titleImage" height="50px" src="lady_logo.png" alt="천안 레이디싱어즈">
+        
+        <div id="scoreHistory"></div>
+        
+        
+        <div id="lyricsContainer">
+            </div>
+        
+        <button id="checkButton">채점하기</button>
+        <button id="resetButton" style="display:none;">다시 연습하기</button>
+        
+    </div>
+    <script>
+        // --- 🎵 설정 🎵 ---
+        // 노래별 점수 저장을 위한 고유 ID (다른 노래를 추가할 때 이 값을 바꿔주세요)
+        const songId = "lady001_we"; 
+        
+        // 화면에 표시할 최근 점수 개수
+        const count_current_score = 5;
+
+        const songTitle = "우리";
+        // ❗ `!`가 붙은 단어는 문제로 출제되지 않습니다.
+        const songLyrics = `외로움도 견뎌나가겠소 
+바보라는 소릴 들어도 좋소
+날 비웃는 그 비웃음들을 
+우리 사랑으로 받아주겠소
+이 모든 것이 힘들다는 것은
+당신은 나에게 알려 주었소
+당신의 사랑은 너무나 많고 크오
+그래서 나는 살아가겠소
+
+우리 모두 손을 내밀어서 
+넘어진 형제 일으켜주세
+사람이 살면 한번 사는 것을 
+걸음 멈추고 생각해보세
+이 시냇물이 강으로 흘러서 
+저 바다와 하나가 되듯이
+우리는 하나요 당신과 나도 하나
+우리는 하나가 되야하오
+
+우리 모두 손에 손을 잡고
+저 험한 세상 걸어가보세
+가다보면 폭풍도 지나고 
+캄캄한 밤도 지나갈거요
+높은 산을 오를때도 있소 
+푸른 초원도 지나갈거요
+서로가 위하고 서로가 사랑하면
+이 모든 것 이겨나갈거요
+
+지금까지 내가 한 말들은
+배워서 한 말들이 아니요
+옳고 그르고 좋고 나쁜 것은
+말안해도 우린 알잖소
+오죽하면 나같은 바보가
+여러분께 호소를 하오
+지금도 모든 것 늦지는 않았으니
+우리는 하나가 되야하오
+
+옆에 있는 형제 손을 잡고
+우리 모두 노래합시다
+서로 보고 인사도 나누고
+우리 모두 일어납시다 자!
+우리 모두 발을 구릅시다
+이렇게 모든 것이 맞을 때
+우리는 하나요 당신과 나도 하나
+우리는 하나가 되야하오
+우리는 하나요 당신과 나도 하나
+우리는 하나가 되야하오
+
+우리는 하나가 되야하오`;
+
+        const blankProbability = 0.3; 
+        
+        // --- 설정 끝 ---
+
+        const lyricsContainer = document.getElementById('lyricsContainer');
+        const checkButton = document.getElementById('checkButton');
+        const resetButton = document.getElementById('resetButton');
+        
+        const scoreHistoryDiv = document.getElementById('scoreHistory');
+
+        function displayScores() {
+            const storageKey = `lyricScores_${songId}`;
+            const scores = JSON.parse(localStorage.getItem(storageKey)) || [];
+            
+            if (scores.length > 0) {
+                scoreHistoryDiv.textContent = `최근 ${count_current_score}회 점수: ${scores.join('점, ')}점 🥇`;
+            } else {
+                scoreHistoryDiv.textContent = '아직 기록된 점수가 없습니다.';
+            }
+        }
+
+        function initializeGame() {
+            lyricsContainer.innerHTML = ''; 
+            
+            const lines = songLyrics.trim().split('\n');
+            
+            lines.forEach(lineText => {
+                const lineDiv = document.createElement('p');
+                const words = lineText.trim().split(/\s+/);
+
+                words.forEach(word => {
+                    if (!word) return;
+
+                    // ❗ 수정된 부분: 단어가 '!'로 시작하는지 확인
+                    if (word.startsWith('!')) {
+                        // '!'로 시작하면, '!'를 제거하고 항상 텍스트로 표시
+                        const span = document.createElement('span');
+                        span.textContent = word.substring(1); // '!' 제외한 나머지 문자열
+                        span.className = 'word-span';
+                        lineDiv.appendChild(span);
+                    } else {
+                        // '!'가 없는 단어는 기존 확률에 따라 빈칸 또는 텍스트로 처리
+                        if (Math.random() < blankProbability) {
+                            const input = document.createElement('input');
+                            input.type = 'text';
+                            input.dataset.originalWord = word; 
+                            input.setAttribute('aria-label', '가사 빈칸');
+                            lineDiv.appendChild(input);
+                        } else {
+                            const span = document.createElement('span');
+                            span.textContent = word;
+                            span.className = 'word-span';
+                            lineDiv.appendChild(span);
+                        }
+                    }
+                    lineDiv.appendChild(document.createTextNode(' ')); 
+                });
+                lyricsContainer.appendChild(lineDiv);
+            });
+
+            checkButton.style.display = 'block';
+            resetButton.style.display = 'none';
+        }
+
+        function checkAnswers() {
+            const inputs = lyricsContainer.querySelectorAll('input[type="text"]');
+            let correctCount = 0;
+            const totalBlanks = inputs.length;
+
+            if (totalBlanks === 0) {
+                alert("채점할 빈칸이 없습니다. 다시 시작해주세요.");
+                checkButton.style.display = 'none';
+                resetButton.style.display = 'block';
+                return;
+            }
+
+            inputs.forEach(input => {
+                const userValue = input.value.trim();
+                const originalWord = input.dataset.originalWord;
+                
+                const resultSpan = document.createElement('span');
+                const userAnswerSpan = document.createElement('span');
+                userAnswerSpan.textContent = userValue || "[입력안함]";
+                userAnswerSpan.className = 'user-attempt';
+
+                if (userValue.toLowerCase() === originalWord.toLowerCase()) {
+                    correctCount++;
+                    userAnswerSpan.classList.add('correct');
+                    resultSpan.appendChild(userAnswerSpan);
+                } else {
+                    userAnswerSpan.classList.add('incorrect');
+                    resultSpan.appendChild(userAnswerSpan);
+                    
+                    const hintSpan = document.createElement('span');
+                    hintSpan.className = 'correct-answer-hint';
+                    hintSpan.textContent = `(정답: ${originalWord})`;
+                    resultSpan.appendChild(hintSpan);
+                }
+                
+                input.parentNode.replaceChild(resultSpan, input);
+            });
+            
+            const score = Math.round((correctCount / totalBlanks) * 100);
+            
+            const storageKey = `lyricScores_${songId}`;
+            const scores = JSON.parse(localStorage.getItem(storageKey)) || [];
+            scores.unshift(score);
+            const recentScores = scores.slice(0, count_current_score); 
+            localStorage.setItem(storageKey, JSON.stringify(recentScores));
+
+            displayScores();
+
+            checkButton.style.display = 'none';
+            resetButton.style.display = 'block';
+        }
+
+        checkButton.addEventListener('click', checkAnswers);
+        resetButton.addEventListener('click', initializeGame);
+
+        displayScores();
+        initializeGame();
+    </script>
+</body>
+</html>
