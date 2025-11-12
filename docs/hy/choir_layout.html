@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>합창단 좌석 배치</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      display: flex;
+      flex-direction: column; /* 전체 레이아웃을 세로로 정렬 */
+      gap: 20px;
+    }
+    .main-content {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+    .left {
+      flex: 1 1 60%; /* 유연하게 확장 및 축소 */
+      min-width: 400px; /* 최소 너비 설정 */
+    }
+    .controls-area { /* 파트 버튼, 총원, 제어 버튼들을 포함하는 새로운 영역 */
+        display: flex;
+        flex-direction: column; /* 내부 요소들을 세로로 정렬 */
+        gap: 20px; /* 섹션별 간격 */
+        margin-top: 20px;
+    }
+    .part-and-summary-row { /* 파트 버튼과 총원 요약을 한 줄에 */
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        width: 100%;
+    }
+    .part-buttons {
+      display: flex;
+      flex-wrap: wrap; /* 버튼이 너무 많으면 줄바꿈 */
+      gap: 10px;
+      align-items: flex-start; /* 파트 인원 표시가 위로 정렬되도록 */
+      flex-grow: 1; /* 남은 공간을 차지하도록 */
+    }
+    .part-buttons button {
+      padding: 8px 12px;
+      font-size: 14px;
+      font-weight: bold;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column; /* 텍스트와 숫자를 세로로 정렬 */
+      align-items: center;
+      min-width: 60px; /* 버튼 최소 너비 */
+    }
+    .part-count {
+      font-size: 12px;
+      margin-top: 2px;
+      opacity: 0.8;
+    }
+    .btn-s { background: #ef4444; color: white; }
+    .btn-a { background: #facc15; color: black; }
+    .btn-t { background: #3b82f6; color: white; }
+    .btn-b { background: #22c54e; color: white; }
+    .btn-clear { background: #6b7280; color: white; } /* 해제 버튼 색상 */
+    .btn-action { background: #4f46e5; color: white; } /* 저장/불러오기 버튼 색상 */
+    .btn-secondary { background: #60a5fa; color: white; } /* 유사 데이터 불러오기 버튼 */
+
+
+    .total-summary {
+      font-weight: bold;
+      background: #e0e7ff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: center; /* 텍스트를 가운데 정렬 */
+      align-items: center;
+      width: 120px; /* 고정 너비 */
+      flex-shrink: 0; /* 공간이 부족해도 줄어들지 않도록 */
+    }
+    .total-summary strong {
+        font-size: 16px;
+        margin-left: 5px; /* "총원:" 텍스트와의 간격 */
+    }
+
+    .grid-row-wrapper {
+      display: flex;
+      align-items: center; /* rowSummary가 셀과 같은 높이에 중앙 정렬 */
+      margin-bottom: 4px; /* 각 줄 사이 간격 */
+    }
+    .grid {
+      display: grid;
+      gap: 4px;
+      position: relative;
+      user-select: none;
+      flex-grow: 1; /* 그리드가 사용 가능한 공간을 채우도록 */
+    }
+    .cell {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #e5e7eb; /* gray */
+      border: 1px solid #9ca3af;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+      box-sizing: border-box; /* padding, border가 너비에 포함되도록 */
+    }
+    .cell.selected {
+      outline: 3px solid #000;
+      z-index: 10; /* 선택된 셀이 드래그 박스 위에 오도록 */
+    }
+
+    .selection-box {
+      position: absolute;
+      border: 2px dashed #000;
+      background: rgba(0,0,0,0.1);
+      pointer-events: none;
+      z-index: 5; /* 셀보다 아래, 그리드 위에 */
+    }
+    .row-summary-inline {
+      margin-left: 10px;
+      font-size: 13px;
+      padding: 4px 8px;
+      background: #f3f4f6;
+      border-radius: 6px;
+      white-space: nowrap; /* 줄바꿈 방지 */
+    }
+    
+    .controls, .save-load-area { /* control, save/load 버튼 영역 스타일 */
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        width: 100%; /* 부모의 100% 너비 사용 */
+        justify-content: flex-end; /* 오른쪽으로 정렬 */
+    }
+    .controls label, .save-load-area label {
+        white-space: nowrap;
+    }
+    .controls input, .save-load-area input {
+        width: 80px; /* 입력 필드 너비 조정 */
+        padding: 5px 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+    .save-load-area input[type="text"] {
+        flex-grow: 1; /* 인원 입력 필드가 넓게 사용되도록 */
+        min-width: 150px;
+    }
+
+    .saved-layouts-list-container {
+        margin-top: 40px;
+        width: 100%;
+    }
+    .saved-layouts-list {
+        list-style: none;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* 반응형 그리드 목록 */
+        gap: 15px;
+    }
+    .saved-layouts-list li {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        font-size: 14px;
+    }
+    .saved-layouts-list li strong {
+        font-size: 16px;
+        color: #1f2937;
+    }
+    .saved-layouts-list li span {
+        color: #4b5563;
+    }
+
+    /* 모바일 반응형 */
+    @media (max-width: 768px) {
+        .main-content {
+            flex-direction: column;
+        }
+        .left {
+            min-width: unset;
+            width: 100%;
+        }
+        .controls-area {
+            align-items: center;
+        }
+        .part-and-summary-row {
+            flex-direction: column;
+            align-items: center;
+        }
+        .part-buttons {
+            justify-content: center;
+            width: 100%;
+        }
+        .total-summary {
+            margin-top: 10px;
+        }
+        .controls, .save-load-area {
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+        .controls label, .save-load-area label {
+            width: 100%;
+            text-align: center;
+        }
+        .controls input, .save-load-area input {
+            width: calc(100% - 20px); /* 패딩 고려 */
+            max-width: 250px;
+        }
+        .save-load-area input[type="text"] {
+            width: calc(100% - 20px);
+            max-width: 300px;
+        }
+    }
+  </style>
+</head>
+<body>
+  <div class="main-content">
+    <div class="left">
+      <div id="grid-wrapper"></div>
+
+      <div class="controls-area">
+          <div class="part-and-summary-row">
+              <div class="part-buttons">
+                <button class="btn-s" data-part="S">S <span class="part-count" id="count-s">0</span></button>
+                <button class="btn-a" data-part="A">A <span class="part-count" id="count-a">0</span></button>
+                <button class="btn-t" data-part="T">T <span class="part-count" id="count-t">0</span></button>
+                <button class="btn-b" data-part="B">B <span class="part-count" id="count-b">0</span></button>
+                <button class="btn-clear" data-part="X">X <span class="part-count" id="count-x">0</span></button>
+              </div>
+
+              <div class="total-summary">
+                  총원: <strong id="total-all-count">0</strong>명
+              </div>
+          </div>
+
+          <!-- 그리드 크기 조절 및 생성 버튼 -->
+          <div class="controls">
+            <label>줄 수: <input type="number" id="rows" value="7" min="1"></label>
+            <label>좌석 수: <input type="number" id="cols" value="16" min="1"></label>
+            <button id="generate">생성</button>
+          </div>
+
+          <!-- 저장 및 불러오기 관련 UI -->
+          <div class="save-load-area">
+            <label>날짜: <input type="date" id="saveDate"></label>
+            <button id="saveBtn" class="btn-action">저장</button>
+            <button id="clearBtn" class="btn-action">기록초기화</button>
+            <button id="loadLatestBtn" class="btn-action">최근 날짜 불러오기</button>
+            <label>인원(S,A,T,B): <input type="text" id="similarCounts" placeholder="예: 10,12,8,7"></label>
+            <button id="loadSimilarBtn" class="btn-secondary">유사 데이터 불러오기</button>
+          </div>
+      </div>
+    </div>
+  </div>
+  <center><a href="https://learn-and-give.tistory.com/155" target="new">설명서 및 개선요청(v.2)</a></center> 
+  <!-- 저장된 배치 목록 -->
+  <div class="saved-layouts-list-container">
+    <h3>저장된 배치 목록</h3>
+    <ul id="saved-layouts-list" class="saved-layouts-list">
+      <!-- 여기에 저장된 배치 정보가 동적으로 추가됩니다 -->
+    </ul>
+  </div>
+
+  <script>
+    const gridWrapper = document.getElementById("grid-wrapper");
+    const generateBtn = document.getElementById("generate");
+    const saveBtn = document.getElementById("saveBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const loadLatestBtn = document.getElementById("loadLatestBtn");
+    const loadSimilarBtn = document.getElementById("loadSimilarBtn");
+    const rowsInput = document.getElementById("rows");
+    const colsInput = document.getElementById("cols");
+    const saveDateInput = document.getElementById("saveDate");
+    const similarCountsInput = document.getElementById("similarCounts");
+    const savedLayoutsList = document.getElementById("saved-layouts-list");
+
+
+    const partCountS = document.getElementById("count-s");
+    const partCountA = document.getElementById("count-a");
+    const partCountT = document.getElementById("count-t");
+    const partCountB = document.getElementById("count-b");
+    const partCountX = document.getElementById("count-x"); // X 버튼 카운트
+    const totalAllCount = document.getElementById("total-all-count");
+
+    const partColors = {
+      S: "#ef4444", // red
+      A: "#facc15", // yellow
+      T: "#3b82f6", // blue
+      B: "#22c54e", // green
+      X: "#e5e7eb", // gray (초기 셀 색상과 동일)
+    };
+
+    let selectedCells = [];
+    let isDragging = false;
+    let startX, startY, selectionBox;
+    let rows = 7, cols = 16;
+    let gridElements = []; // 셀 요소를 저장할 배열
+
+    // 오늘 날짜로 saveDateInput 초기화
+    function setTodayDate() {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        saveDateInput.value = `${year}-${month}-${day}`;
+    }
+    
+    setTodayDate(); // 페이지 로드 시 오늘 날짜 설정
+
+
+    function generateGrid(r, c) {
+      rows = r;
+      cols = c;
+      gridWrapper.innerHTML = "";
+      gridElements = []; // 초기화
+
+      for (let row = 0; row < r; row++) {
+        const rowWrapper = document.createElement("div");
+        rowWrapper.className = "grid-row-wrapper";
+        rowWrapper.dataset.row = row; // 줄 번호를 래퍼에도 추가
+
+        const gridRow = document.createElement("div"); // 실제 셀들이 들어갈 그리드
+        gridRow.className = "grid";
+        gridRow.style.gridTemplateColumns = `repeat(${c}, 40px)`;
+        rowWrapper.appendChild(gridRow);
+
+        for (let col = 0; col < c; col++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.dataset.row = row;
+          cell.dataset.col = col;
+          // 초기 상태는 배치되지 않은 상태 (X)로 간주
+          cell.dataset.part = "X";
+          gridRow.appendChild(cell);
+          gridElements.push(cell); // 배열에 셀 추가
+        }
+
+        const rowSummaryInline = document.createElement("div");
+        rowSummaryInline.className = "row-summary-inline";
+        rowSummaryInline.id = `row-summary-${row}`; // 각 줄별 고유 ID 부여
+        rowWrapper.appendChild(rowSummaryInline);
+
+        gridWrapper.appendChild(rowWrapper);
+      }
+      updateSummary();
+    }
+
+    function clearSelection() {
+      selectedCells.forEach(cell => cell.classList.remove("selected"));
+      selectedCells = [];
+    }
+
+    function getRelativeCoordinates(event) {
+        if (event.touches) { // 터치 이벤트
+            return { x: event.touches[0].clientX, y: event.touches[0].clientY };
+        } else { // 마우스 이벤트
+            return { x: event.clientX, y: event.clientY };
+        }
+    }
+
+    function selectCellsInBox(x1, y1, x2, y2) {
+      clearSelection();
+      gridElements.forEach(cell => {
+        const rect = cell.getBoundingClientRect();
+        if (
+          rect.left < Math.max(x1, x2) &&
+          rect.right > Math.min(x1, x2) &&
+          rect.top < Math.max(y1, y2) &&
+          rect.bottom > Math.min(y1, y2)
+        ) {
+          cell.classList.add("selected");
+          selectedCells.push(cell);
+        }
+      });
+    }
+
+    function updateSummary() {
+      let totalAll = 0;
+      const partTotals = { S:0, A:0, T:0, B:0, X:0 };
+      
+      for (let r = 0; r < rows; r++) {
+        const rowCells = gridElements.filter(cell => parseInt(cell.dataset.row) === r);
+        let total = 0;
+        const partCountsInRow = { S:0, A:0, T:0, B:0, X:0 };
+
+        rowCells.forEach(cell => {
+          const part = cell.dataset.part;
+          if (part) {
+            if (part !== 'X') {
+                total++;
+            }
+            partTotals[part]++;
+            partCountsInRow[part]++;
+          }
+        });
+        totalAll += total;
+
+        const rowSummaryInline = document.getElementById(`row-summary-${r}`);
+        if (rowSummaryInline) {
+            if (total > 0) {
+                const summaryParts = [];
+                for (const partKey in partCountsInRow) {
+                    if (partKey !== 'X' && partCountsInRow[partKey] > 0) {
+                        summaryParts.push(`${partKey}:${partCountsInRow[partKey]}`);
+                    }
+                }
+                rowSummaryInline.textContent = `총 ${total}명 | ${summaryParts.join(" ")}`;
+            } else {
+                rowSummaryInline.textContent = `배치 없음`;
+            }
+        }
+      }
+
+      totalAllCount.textContent = totalAll;
+      partCountS.textContent = partTotals.S;
+      partCountA.textContent = partTotals.A;
+      partCountT.textContent = partTotals.T;
+      partCountB.textContent = partTotals.B;
+      partCountX.textContent = partTotals.X;
+    }
+
+
+    // 터치/마우스 이벤트 시작
+    function handleStart(e) {
+      // 터치 이벤트의 경우, target이 cell이 아닌 gridWrapper일 수도 있으므로 .grid 또는 .cell을 확인
+      if (e.target.closest(".grid") || e.target.classList.contains("cell")) {
+        isDragging = true;
+        const coords = getRelativeCoordinates(e); // clientX/Y
+        startX = coords.x; // clientX
+        startY = coords.y; // clientY
+
+        selectionBox = document.createElement("div");
+        selectionBox.className = "selection-box";
+        document.body.appendChild(selectionBox);
+
+        // 초기 박스 위치 설정 (작은 사각형으로 시작)
+        selectionBox.style.left = startX + "px";
+        selectionBox.style.top = startY + "px";
+        selectionBox.style.width = "0px";
+        selectionBox.style.height = "0px";
+
+        e.preventDefault(); // 기본 터치(스크롤 등) 동작 방지
+      }
+    }
+
+    // 터치/마우스 이벤트 이동
+    function handleMove(e) {
+      if (isDragging && selectionBox) {
+        const coords = getRelativeCoordinates(e); // clientX/Y
+        const currentX = coords.x; // clientX
+        const currentY = coords.y; // clientY
+
+        // selectionBox의 CSS top/left/width/height를 clientX/Y 기준으로 계산합니다.
+        const x = Math.min(currentX, startX);
+        const y = Math.min(currentY, startY);
+        const w = Math.abs(currentX - startX);
+        const h = Math.abs(currentY - startY);
+
+        selectionBox.style.left = x + "px";
+        selectionBox.style.top = y + "px";
+        selectionBox.style.width = w + "px";
+        selectionBox.style.height = h + "px";
+
+        // selectCellsInBox 함수는 이미 clientX/Y 기준으로 셀 Rect를 비교하고 있으므로 변경 없음
+        selectCellsInBox(startX, startY, currentX, currentY);
+        e.preventDefault(); // 기본 터치(스크롤 등) 동작 방지
+      }
+    }
+
+    // 터치/마우스 이벤트 종료
+    function handleEnd() {
+      if (isDragging) {
+        isDragging = false;
+        if (selectionBox) {
+          selectionBox.remove();
+          selectionBox = null;
+        }
+      }
+    }
+
+
+
+
+    document.addEventListener("mousedown", handleStart);
+    document.addEventListener("mousemove", handleMove);
+    document.addEventListener("mouseup", handleEnd);
+    document.addEventListener("touchstart", handleStart, { passive: false });
+    document.addEventListener("touchmove", handleMove, { passive: false });
+    document.addEventListener("touchend", handleEnd);
+
+
+    document.querySelectorAll(".part-buttons button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const part = btn.dataset.part;
+        if (part) applyPart(part);
+      });
+    });
+
+    document.addEventListener("keydown", (e) => {
+      const key = e.key.toUpperCase();
+      if (["S","A","T","B"].includes(key)) {
+        applyPart(key);
+      } else if (e.key === "Delete" || e.key === "Backspace" || key === "X") {
+        selectedCells.forEach(cell => {
+          cell.textContent = "";
+          cell.style.background = partColors.X;
+          cell.dataset.part = "X";
+        });
+        updateSummary();
+        clearSelection();
+      }
+    });
+
+    function applyPart(part) {
+      selectedCells.forEach(cell => {
+        cell.textContent = (part === 'X' ? '' : part);
+        cell.style.background = partColors[part];
+        cell.dataset.part = part;
+      });
+      updateSummary();
+      clearSelection();
+    }
+
+    generateBtn.addEventListener("click", () => {
+      const r = parseInt(rowsInput.value);
+      const c = parseInt(colsInput.value);
+      if (!isNaN(r) && !isNaN(c) && r > 0 && c > 0) {
+          generateGrid(r, c);
+      } else {
+          alert("유효한 줄 수와 좌석 수를 입력해주세요.");
+      }
+    });
+
+    // 전체 레이아웃 데이터 구조
+    // { "YYYY-MM-DD": { rows: N, cols: M, cells: [...], partCounts: {S:x, A:y, T:z, B:w}, totalCount: Z } }
+    let allChorusLayouts = JSON.parse(localStorage.getItem('allChorusLayouts')) || {};
+
+    // 레이아웃 저장 함수
+    function saveLayout() {
+        const saveDate = saveDateInput.value;
+        if (!saveDate) {
+            alert("저장할 날짜를 입력해주세요.");
+            return;
+        }
+
+        const layoutData = {
+            rows: rows,
+            cols: cols,
+            cells: [],
+            partCounts: { S:0, A:0, T:0, B:0 }
+        };
+
+        let currentTotal = 0;
+        gridElements.forEach(cell => {
+            layoutData.cells.push({
+                row: parseInt(cell.dataset.row),
+                col: parseInt(cell.dataset.col),
+                part: cell.dataset.part
+            });
+            if (cell.dataset.part !== 'X') {
+                layoutData.partCounts[cell.dataset.part]++;
+                currentTotal++;
+            }
+        });
+        layoutData.totalCount = currentTotal;
+
+        if (allChorusLayouts[saveDate]) {
+            if (!confirm(`${saveDate} 날짜의 배치 정보가 이미 있습니다. 덮어쓰시겠습니까?`)) {
+                return;
+            }
+        }
+        
+        allChorusLayouts[saveDate] = layoutData;
+        localStorage.setItem('allChorusLayouts', JSON.stringify(allChorusLayouts));
+        alert(`${saveDate} 날짜의 좌석 배치가 저장되었습니다!`);
+        updateLayoutList(); // 목록 업데이트
+    }
+
+    // 레이아웃 불러오기 (실제 그리드에 적용)
+    function applyLayoutToGrid(layoutData) {
+        // 저장된 줄 수와 좌석 수로 그리드 다시 생성
+        rowsInput.value = layoutData.rows;
+        colsInput.value = layoutData.cols;
+        generateGrid(layoutData.rows, layoutData.cols); // 새로운 크기로 그리드를 다시 그립니다.
+
+        // 각 셀에 저장된 파트 정보 적용
+        layoutData.cells.forEach(data => {
+            const cell = gridElements.find(c => 
+                parseInt(c.dataset.row) === data.row && 
+                parseInt(c.dataset.col) === data.col
+            );
+            if (cell) {
+                cell.dataset.part = data.part;
+                cell.textContent = (data.part === 'X' ? '' : data.part);
+                cell.style.background = partColors[data.part];
+            }
+        });
+        updateSummary();
+    }
+
+    // 가장 최근 날짜의 레이아웃 불러오기
+    function loadLatestLayout() {
+        const dates = Object.keys(allChorusLayouts).sort().reverse(); // 날짜 내림차순 정렬
+        if (dates.length > 0) {
+            const latestDate = dates[0];
+            const layoutData = allChorusLayouts[latestDate];
+            applyLayoutToGrid(layoutData);
+            saveDateInput.value = latestDate; // 날짜 입력 필드도 업데이트
+            alert(`가장 최근 (${latestDate}) 좌석 배치를 불러왔습니다!`);
+        } else {
+            alert('저장된 좌석 배치가 없습니다.');
+        }
+    }
+
+    // 유사 데이터 불러오기 함수
+    function loadSimilarLayout() {
+        const inputCountsStr = similarCountsInput.value;
+        const inputCountsArr = inputCountsStr.split(',').map(s => parseInt(s.trim()));
+
+        if (inputCountsArr.length !== 4 || inputCountsArr.some(isNaN)) {
+            alert("파트별 인원을 'S,A,T,B' 형식(예: 10,12,8,7)으로 정확히 입력해주세요.");
+            return;
+        }
+
+        const targetPartCounts = {
+            S: inputCountsArr[0],
+            A: inputCountsArr[1],
+            T: inputCountsArr[2],
+            B: inputCountsArr[3]
+        };
+
+        let minDifference = Infinity;
+        let mostSimilarLayoutDate = null;
+        let mostSimilarLayoutData = null;
+
+        // 날짜를 기준으로 정렬 (최신순 우선)
+        const sortedDates = Object.keys(allChorusLayouts).sort().reverse(); 
+
+        for (const date of sortedDates) {
+            const layoutData = allChorusLayouts[date];
+            const savedPartCounts = layoutData.partCounts;
+
+            // partCounts가 없는 이전 데이터나 유효하지 않은 데이터는 스킵
+            if (!savedPartCounts || Object.keys(savedPartCounts).length !== 4 || Object.values(savedPartCounts).some(isNaN)) continue; 
+
+            const diffS = targetPartCounts.S - savedPartCounts.S;
+            const diffA = targetPartCounts.A - savedPartCounts.A;
+            const diffT = targetPartCounts.T - savedPartCounts.T;
+            const diffB = targetPartCounts.B - savedPartCounts.B;
+
+            const currentDifference = 
+                (diffS * diffS) + 
+                (diffA * diffA) + 
+                (diffT * diffT) + 
+                (diffB * diffB);
+            
+            // 더 작은 차이이거나, 차이가 같을 경우 더 최근 날짜 선택
+            if (currentDifference < minDifference) {
+                minDifference = currentDifference;
+                mostSimilarLayoutDate = date;
+                mostSimilarLayoutData = layoutData;
+            }
+        }
+
+        if (mostSimilarLayoutData) {
+            applyLayoutToGrid(mostSimilarLayoutData);
+            saveDateInput.value = mostSimilarLayoutDate; // 날짜 입력 필드도 업데이트
+            alert(`입력 인원과 가장 유사한 (${mostSimilarLayoutDate}) 좌석 배치를 불러왔습니다!`);
+        } else {
+            alert('유사한 좌석 배치를 찾을 수 없습니다.');
+        }
+    }
+
+    // 저장된 배치 목록 업데이트 함수
+    function updateLayoutList() {
+        savedLayoutsList.innerHTML = "";
+        const dates = Object.keys(allChorusLayouts).sort().reverse(); // 최신 날짜가 위로 오도록 정렬
+
+        if (dates.length === 0) {
+            savedLayoutsList.innerHTML = "<li>저장된 배치 정보가 없습니다.</li>";
+            return;
+        }
+
+        dates.forEach(date => {
+            const layout = allChorusLayouts[date];
+            if (!layout) return;
+
+            const li = document.createElement("li");
+            let partSummary = [];
+            if (layout.partCounts) {
+                if (layout.partCounts.S > 0) partSummary.push(`S:${layout.partCounts.S}`);
+                if (layout.partCounts.A > 0) partSummary.push(`A:${layout.partCounts.A}`);
+                if (layout.partCounts.T > 0) partSummary.push(`T:${layout.partCounts.T}`);
+                if (layout.partCounts.B > 0) partSummary.push(`B:${layout.partCounts.B}`);
+            }
+
+            li.innerHTML = `
+                <strong>날짜: ${date}</strong>
+                <span>총원: ${layout.totalCount || 0}명</span>
+                <span>파트별: ${partSummary.join(', ') || '정보 없음'}</span>
+                <span>(줄: ${layout.rows || '-'}, 좌석: ${layout.cols || '-'})</span>
+            `;
+            savedLayoutsList.appendChild(li);
+        });
+    }
+
+    // 레이아웃 저장 함수
+    function clearData() {
+      const userResponse = confirm("저장 된 데이터를 모두 삭제하시겠습니까?");
+      if (userResponse) {
+        localStorage.clear();
+        //localStorage.removeItem('allChorusLayouts');
+        alert('좌석 배치 정보가 모두 삭제 되었습니다.');
+      }
+    }
+
+    clearBtn.addEventListener("click", clearData);
+
+    saveBtn.addEventListener("click", saveLayout);
+    loadLatestBtn.addEventListener("click", loadLatestLayout);
+    loadSimilarBtn.addEventListener("click", loadSimilarLayout);
+
+    // 버그 수정: 항상 초기 격자를 생성하고, 저장된 레이아웃이 있으면 최신 레이아웃을 불러옵니다.
+    generateGrid(7, 16); // 항상 기본 격자 생성
+
+    if (Object.keys(allChorusLayouts).length > 0) {
+        loadLatestLayout();
+    }
+    updateLayoutList(); // 페이지 로드 시 목록 업데이트
+  </script>
+</body>
+</html>
